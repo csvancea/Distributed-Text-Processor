@@ -1,6 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <string>
+#include <vector>
+
 #include "Nodes.h"
 
 #define MASTER_NUM_THREADS 4
@@ -13,12 +16,15 @@ public:
     virtual ~Master() override;
     virtual void Start() override;
 
+private:
     void WorkerThread(int nodeType);
     void ParseAndSendToWorkers(int nodeType, const std::string& paragraphName);
     void ReceiveAndReassembleFromWorkers(int nodeType, const std::string& paragraphName);
 
-    static std::string GetParagraphNameFromNodeType(int nodeType);
+    void WriteOutputFile();
 
-private:
+
     std::string _baseFileName;
+    std::atomic<bool> _paragraphsListInitialized;
+    std::vector<Paragraph> _paragraphsList;
 };

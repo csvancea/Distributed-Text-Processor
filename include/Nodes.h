@@ -1,5 +1,18 @@
 #pragma once
 
+#include <list>
+#include <string>
+
+
+struct Paragraph
+{
+    union {
+        int globalIdx;
+        int paragraphType;
+    };
+    std::list<std::string> lines;
+};
+
 class Node
 {
 public:
@@ -16,6 +29,8 @@ public:
 
     virtual ~Node() {};
     virtual void Start() = 0;
+
+    static std::string GetNodeNameFromNodeType(int nodeType);
 };
 
 static_assert (Node::TYPE_MASTER == Node::TYPE_WORKER_HORROR-1, "eNodeType" );
