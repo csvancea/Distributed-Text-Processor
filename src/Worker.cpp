@@ -1,5 +1,6 @@
 #include <mpi.h>
 #include <thread>
+#include <vector>
 #include <unistd.h>
 
 #include "Logger.h"
@@ -109,20 +110,98 @@ void Worker::ProcessLastParagraph()
 
 void WorkerHorror::ProcessLine(std::string& line)
 {
-    line += __PRETTY_FUNCTION__;
+    std::string newLine;
+
+    auto isConsonant = [](char ch) {
+        int lowCh = tolower(ch);
+        return (isalpha(ch) && lowCh != 'a' && lowCh != 'e' && lowCh != 'i' && lowCh != 'o' && lowCh != 'u');
+    };
+
+    for (auto ch : line) {
+        newLine += ch;
+        if (isConsonant(ch)) {
+            newLine += static_cast<char>(tolower(ch));
+        }
+    }
+
+    line = std::move(newLine);
 }
 
 void WorkerComedy::ProcessLine(std::string& line)
 {
-    line += __PRETTY_FUNCTION__;
+    std::string newLine;
+    int idx = 1;
+
+    for (auto ch : line) {
+        if (ch == ' ') {
+            idx = 0;
+        }
+        else if (idx % 2 == 0 && isalpha(ch)) {
+            ch = static_cast<char>(toupper(ch));
+        }
+
+        newLine += ch;
+        idx++;
+    }
+
+    line = std::move(newLine);
 }
 
 void WorkerFantasy::ProcessLine(std::string& line)
 {
-    line += __PRETTY_FUNCTION__;
+    std::string newLine;
+    bool upperNext = true;
+
+    for (auto ch : line) {
+        if (ch == ' ') {
+            upperNext = true;
+        }
+        else if (upperNext) {
+            upperNext = false;
+            if (isalpha(ch)) {
+                ch = static_cast<char>(toupper(ch));
+            }
+        }
+
+        newLine += ch;
+    }
+
+    line = std::move(newLine);
 }
 
+// WARNING: This function assumes that words are separed by a **SINGLE** space
 void WorkerSF::ProcessLine(std::string& line)
 {
-    line += __PRETTY_FUNCTION__;
+    std::vector<std::string> tokens;
+
+    auto split = [](const std::string& str, std::vector<std::string>& cont, char delim = ' ') {
+        size_t current, previous = 0;
+        current = str.find(delim);
+        while (current != std::string::npos) {
+            cont.push_back(str.substr(previous, current - previous));
+            previous = current + 1;
+            current = str.find(delim, previous);
+        }
+        cont.push_back(str.substr(previous, current - previous));
+    };
+
+    auto reverse = [](std::string& str) {
+        size_t n = str.length();
+    
+        for (size_t i = 0; i < n/2; ++i) {
+            std::swap(str[i], str[n-i-1]);
+        }
+    };
+
+
+    split(line, tokens);
+    for (size_t i = 6; i < tokens.size(); i += 7) {
+        reverse(tokens[i]);
+    }
+
+    line.clear();
+    for (auto& token : tokens) {
+        line += token + ' ';
+    }
+    line.pop_back();
 }
