@@ -62,18 +62,17 @@ public:
 		std::string final;
 		
 		if (rule == RULE_MESSAGE)
-			final = fmt::format("{}\n", message);
+			final = fmt::format("{}", message);
 		else if (_ID.empty())
-			final = fmt::format("[{}] {}\n", GetRulePrefix(rule), message);
+			final = fmt::format("[{}] {}", GetRulePrefix(rule), message);
 		else
-			final = fmt::format("[{}:{}] {}\n", GetRulePrefix(rule), _ID, message);
+			final = fmt::format("[{}:{}] {}", GetRulePrefix(rule), _ID, message);
 
 		if (_outputToFile && (_outputToFileRules & rule)) {
-			_outputFile << final;
-			_outputFile.flush();
+			_outputFile << final << std::endl;
 		}
 		if (_outputToStdout && (_outputToStdoutRules & rule)) {
-			std::cout << final;
+			std::cout << final << std::endl;
 		}
 #ifdef _WIN32
 		if (_outputToDebugger && (_outputToDebuggerRules & rule)) {
