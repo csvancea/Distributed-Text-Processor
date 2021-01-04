@@ -9,7 +9,7 @@
 
 int main (int argc, char *argv[])
 {
-    int numtasks, rank, provided;
+    int numtasks, rank, provided = -1;
     auto& logger = Logger::GetInstance();
     Node* node = nullptr;
     std::string nodeName;
@@ -24,6 +24,10 @@ int main (int argc, char *argv[])
     logger.SetID(nodeName);
 
     LOG_DEBUG("Started process ID: {}", getpid());
+
+    if (provided != MPI_THREAD_MULTIPLE) {
+        LOG_FATAL("MPI_THREAD_MULTIPLE is not supported (provided = {})", provided);
+    }
 
     switch (rank) {
     case Node::TYPE_MASTER:
