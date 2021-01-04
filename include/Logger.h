@@ -2,6 +2,10 @@
 
 #ifdef _WIN32
 	#include <Windows.h>
+#else
+	#include <sys/syscall.h>
+	#include <sys/types.h>
+	#include <unistd.h>
 #endif
 
 #include <string>
@@ -60,13 +64,18 @@ public:
 	void Log(int rule, const char *format, const Args& ... args) {
 		std::string message = fmt::vformat(format, fmt::make_format_args(args...));
 		std::string final;
+		int threadID;
+
+#ifdef _WIN32
+		threadID = GetCurrentThreadId();
+#else
+		threadID = syscall(SYS_gettid);
+#endif
 		
 		if (rule == RULE_MESSAGE)
 			final = fmt::format("{}", message);
-		else if (_ID.empty())
-			final = fmt::format("[{}] {}", GetRulePrefix(rule), message);
 		else
-			final = fmt::format("[{}:{}] {}", GetRulePrefix(rule), _ID, message);
+			final = fmt::format("[{}:{}:{}] {}", GetRulePrefix(rule), _ID, threadID, message);
 
 		if (_outputToFile && (_outputToFileRules & rule)) {
 			_outputFile << final << std::endl;

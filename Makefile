@@ -1,12 +1,12 @@
 CXX = mpicxx
-CXXFLAGS = -c -Wall -Wextra -DFMT_HEADER_ONLY -I./include
+CXXFLAGS = -c -Wall -Wextra -std=c++11 -DFMT_HEADER_ONLY -I./include
 CXXFLAGS += -g -DENABLE_LOGGING
 # CXXFLAGS += -O2 -march=native -mtune=native
 LDFLAGS = -pthread
 
 EXE_NAME = main
 N_WORKERS = 5
-IN_FILE = file.in
+IN_FILE = tests/file.in
 
 SRC_DIR = ./src
 OUT_DIR = ./build/linux

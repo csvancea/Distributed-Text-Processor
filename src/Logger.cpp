@@ -3,6 +3,11 @@
 Logger::Logger() :	_outputToFile(false), _outputToFileRules(0), _outputToStdout(false), _outputToStdoutRules(0),
 					_outputToDebugger(false), _outputToDebuggerRules(0)
 {
+#ifdef _WIN32
+	_ID = std::to_string(GetCurrentProcessId());
+#else
+	_ID = std::to_string(getpid());
+#endif
 }
 
 Logger::~Logger()

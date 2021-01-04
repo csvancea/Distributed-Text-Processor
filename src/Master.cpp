@@ -18,6 +18,8 @@ Master::~Master()
 
 void Master::Start()
 {
+    LOG_DEBUG("Master node started (inFile: \"{}\")", _inFileName);
+
     std::thread threads[MASTER_NUM_THREADS];
 
     for (int i = 0; i != MASTER_NUM_THREADS; ++i) {
@@ -38,10 +40,15 @@ void Master::WorkerThread(int nodeType)
         LOG_FATAL("Empty paragraph name for node type: {}", nodeType);
     }
 
-    LOG_DEBUG("Started worker thread for paragraph name: {} (node type: {})", paragraphName, nodeType);
+    LOG_DEBUG("Worker thread started for paragraph name: {} (node type: {})", paragraphName, nodeType);
 
+    LOG_DEBUG("Parsing and sending paragraphs to node: {}", paragraphName);
     ParseAndSendToWorkers(nodeType, paragraphName);
+
+    LOG_DEBUG("Receiving and reassembling paragraphs from node: {}", paragraphName);
     ReceiveAndReassembleFromWorkers(nodeType, paragraphName);
+
+    LOG_DEBUG("Worker thread ended for paragraph name: {}", paragraphName);
 }
 
 void Master::ParseAndSendToWorkers(int nodeType, const std::string& paragraphName)

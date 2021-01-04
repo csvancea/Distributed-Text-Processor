@@ -19,7 +19,7 @@ Worker::~Worker()
 
 void Worker::Start()
 {
-    LOG_DEBUG("Worker started");
+    LOG_DEBUG("Worker node started");
 
     _availableCores = sysconf(_SC_NPROCESSORS_CONF);
     if (_availableCores < 2) {
@@ -35,6 +35,8 @@ void Worker::CommThread()
 
     CommReceive();
     CommSend();
+
+    LOG_DEBUG("Comm thread ended");
 }
 
 void Worker::CommReceive()
