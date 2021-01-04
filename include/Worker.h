@@ -2,7 +2,12 @@
 
 #include <string>
 #include <list>
+
 #include "Nodes.h"
+#include "SimpleThreadPool.h"
+
+#define LINES_PER_WORKER_THREAD (20)
+
 
 class Worker : public Node
 {
@@ -25,6 +30,7 @@ private:
 
     std::list<Paragraph> _paragraphsList;
     int _availableCores;
+    SimpleThreadPool _threadPool;
 };
 
 class WorkerHorror : public Worker

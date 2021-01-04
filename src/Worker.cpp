@@ -21,9 +21,9 @@ void Worker::Start()
 {
     LOG_DEBUG("Worker started");
 
-    _availableCores = sysconf(_SC_NPROCESSORS_CONF) - 1;
-    if (_availableCores < 1) {
-        LOG_FATAL("Expected at least 2 CPU cores, found: {}", _availableCores+1);
+    _availableCores = sysconf(_SC_NPROCESSORS_CONF);
+    if (_availableCores < 2) {
+        LOG_FATAL("Expected at least 2 CPU cores, found: {}", _availableCores);
     }
 
     std::thread(&Worker::CommThread, this).join();
@@ -44,6 +44,8 @@ void Worker::CommReceive()
     MPI_Status status;
     int commandOrParagraphId;
 
+    _threadPool.Start(_availableCores - 1);
+
     while (1) {
         MPI_Recv(&commandOrParagraphId, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
         if (commandOrParagraphId < 0) {
@@ -54,6 +56,9 @@ void Worker::CommReceive()
         ReceiveParagraph(commandOrParagraphId);
         ProcessLastParagraph();
     }
+
+    _threadPool.WaitForJobsToComplete();
+    _threadPool.ShutDown();
 }
 
 void Worker::CommSend()
@@ -101,9 +106,28 @@ void Worker::ReceiveParagraph(int globalParagraphIdx)
 void Worker::ProcessLastParagraph()
 {
     auto& paragraph = _paragraphsList.back();
+    int numOfLines = paragraph.lines.size();
+    int idx = 0;
+    std::list<std::string>::iterator start_it, end_it, it = paragraph.lines.begin();
 
-    for (auto& line : paragraph.lines) {
-        ProcessLine(line);
+    LOG_DEBUG("Processing paragraph idx: {}", paragraph.globalIdx);
+
+    while (it != paragraph.lines.end()) {
+        if (idx % LINES_PER_WORKER_THREAD == 0) {
+            start_it = it;
+        }
+        if (idx % LINES_PER_WORKER_THREAD == LINES_PER_WORKER_THREAD - 1 || idx == numOfLines - 1) {
+            end_it = std::next(it);
+
+            _threadPool.AddJob([=]() {
+                for (auto i = start_it; i != end_it; ++i) {
+                    ProcessLine(*i);
+                }
+            });
+        }
+
+        it++;
+        idx++;
     }
 }
 
