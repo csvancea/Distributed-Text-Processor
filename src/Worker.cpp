@@ -47,20 +47,33 @@ void Worker::CommReceive()
     int commandOrParagraphId;
 
     _threadPool.Start(_availableCores - 1);
+    LOG_DEBUG("Started a thread pool of {} threads", _availableCores-1);
 
     while (1) {
+        LOG_DEBUG("Waiting for command or paragraph from node: master ...");
         MPI_Recv(&commandOrParagraphId, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+        LOG_DEBUG("Received command or paragraph ID {} from node master", commandOrParagraphId);
         if (commandOrParagraphId < 0) {
             // FINISH command
             break;
         }
 
+        LOG_DEBUG("Receiving paragraph ID {} from node master", commandOrParagraphId);
         ReceiveParagraph(commandOrParagraphId);
+
+        LOG_DEBUG("Processing paragraph ID {} from node master", commandOrParagraphId);
         ProcessLastParagraph();
+
+        LOG_DEBUG("Done processing paragraph ID {} from node master", commandOrParagraphId);
     }
 
+    LOG_DEBUG("Waiting for jobs to complete ...");
     _threadPool.WaitForJobsToComplete();
+
+    LOG_DEBUG("Shutting down thread pool ...");
     _threadPool.ShutDown();
+
+    LOG_DEBUG("All incoming messages processed");
 }
 
 void Worker::CommSend()
@@ -70,19 +83,29 @@ void Worker::CommSend()
     int lineLength;
 
     for (auto& paragraph : _paragraphsList) {
+        LOG_DEBUG("Sending paragraph ID {} to node: master ...", paragraph.globalIdx);
         MPI_Send(&paragraph.globalIdx, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+        LOG_DEBUG("Sent paragraph ID {} to node: master", paragraph.globalIdx);
 
         for (auto& line : paragraph.lines) {
             lineLength = line.length();
+            LOG_DEBUG("Sending line \"{}\" (length: {}) of paragraph ID {} to node: master ...", line, lineLength, paragraph.globalIdx);
             MPI_Send(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
             MPI_Send(line.c_str(), lineLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD);
+            LOG_DEBUG("Sent line \"{}\" (length: {}) of paragraph ID {} to node: master", line, lineLength, paragraph.globalIdx);
         }
+
+        LOG_DEBUG("Sending end of paragraph for paragraph ID {} to node: master ...", paragraph.globalIdx);
         lineLength = 0;
         MPI_Send(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+
+        LOG_DEBUG("Sent end of paragraph for paragraph ID {} to node: master", paragraph.globalIdx);
     }
 
+    LOG_DEBUG("Sending of transmission to node: master ...");
     lineLength = -1;
     MPI_Send(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+    LOG_DEBUG("Sent of transmission to node: master");
 }
 
 void Worker::ReceiveParagraph(int globalParagraphIdx)
@@ -94,13 +117,17 @@ void Worker::ReceiveParagraph(int globalParagraphIdx)
     paragraph.globalIdx = globalParagraphIdx;
 
     while (1) {
+        LOG_DEBUG("Receiving current line length for paragraph ID {}", globalParagraphIdx);
         MPI_Recv(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+        LOG_DEBUG("Received current line length for paragraph ID {} -> {}", globalParagraphIdx, lineLength);
         if (!lineLength) {
             break;
         }
 
+        LOG_DEBUG("Receiving current line of length {} for paragraph ID {}", lineLength, globalParagraphIdx);
         paragraph.lines.emplace_back(lineLength, ' ');
         MPI_Recv(&paragraph.lines.back()[0], lineLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+        LOG_DEBUG("Received current line (\"{}\") for paragraph ID {}", paragraph.lines.back(), globalParagraphIdx);
     }
     _paragraphsList.push_back(paragraph);
 }
