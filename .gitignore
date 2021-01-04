@@ -4,8 +4,7 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # User-specific files
-*.in
-*.out
+tests/
 *.rsuser
 *.suo
 *.user
@@ -19,6 +18,8 @@
 mono_crash.*
 
 # Build results
+main
+serial
 [Bb]uild/
 [Dd]ebug/
 [Dd]ebugPublic/

@@ -24,7 +24,8 @@ private:
     void WriteOutputFile();
 
 
-    std::string _baseFileName;
+    std::string _inFileName;
+    std::string _outFileName;
     std::atomic<bool> _paragraphsListInitialized;
     std::vector<Paragraph> _paragraphsList;
 };

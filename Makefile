@@ -4,14 +4,14 @@ CXXFLAGS += -g -DENABLE_LOGGING
 # CXXFLAGS += -O2 -march=native -mtune=native
 LDFLAGS = -pthread
 
-EXE_NAME = tema3apd
+EXE_NAME = main
 N_WORKERS = 5
 IN_FILE = file.in
 
-SRC_DIR = src
-OUT_DIR = build/linux
+SRC_DIR = ./src
+OUT_DIR = ./build/linux
 OBJ_DIR = $(OUT_DIR)/obj
-OUT_EXE = $(OUT_DIR)/$(EXE_NAME)
+OUT_EXE = ./$(EXE_NAME)
 
 SRC_FILES = $(shell find $(SRC_DIR)/ -type f -name '*.cpp')
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
@@ -26,7 +26,7 @@ run: build
 
 .PHONY: clean
 clean:
-	rm -rf "$(OUT_DIR)" "$(OBJ_DIR)"
+	rm -rf "$(OUT_DIR)" "$(OBJ_DIR)" "$(OUT_EXE)"
 
 $(OUT_EXE): $(OBJ_FILES)
 	@mkdir -p "$(OUT_DIR)"

@@ -7,13 +7,8 @@
 
 Master::Master(const std::string& inFile) : _paragraphsListInitialized(false)
 {
-    size_t dotIdx = inFile.find_last_of('.');
-
-    if (dotIdx == std::string::npos || inFile.substr(dotIdx) != ".in") {
-        LOG_FATAL("Invalid extension for file name \"{}\"", inFile);
-    }
-
-    _baseFileName = inFile.substr(0, dotIdx);
+    _inFileName = inFile;
+    _outFileName = inFile + ".out";
 }
 
 Master::~Master()
@@ -60,10 +55,10 @@ void Master::ParseAndSendToWorkers(int nodeType, const std::string& paragraphNam
     int state = WAITING_FOR_PARAGRAPH;
     int paragraphIdx = -1;
     std::string line;
-    std::ifstream inFile(_baseFileName + ".in");
+    std::ifstream inFile(_inFileName);
 
     if (!inFile) {
-        LOG_FATAL("\"{}\" paragraph handler couldn't open file: \"{}.in\"", paragraphName, _baseFileName);
+        LOG_FATAL("\"{}\" paragraph handler couldn't open file: \"{}\"", paragraphName, _inFileName);
     }
 
     while (std::getline(inFile, line)) {
@@ -104,8 +99,12 @@ void Master::ParseAndSendToWorkers(int nodeType, const std::string& paragraphNam
         }
     }
 
-    if (state != WAITING_FOR_PARAGRAPH) {
-        LOG_FATAL("Invalid input file content. Make sure it ends with an empty line. (last state: {}, last line parsed: \"{}\")", state, line);
+    if (state == READING_PARAGRAPH) {
+        LOG_WARNING("Invalid input file content. Make sure it ends with an empty line. (last state: {}, last line parsed: \"{}\")", state, line);
+        LOG_DEBUG("Sending an empty line to signal end of message");
+
+        int lineLength = 0;
+        MPI_Send(&lineLength, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD);
     }
 
     // this vector stores the content received from the worker nodes (paragraphs, same order as in input file)
@@ -154,10 +153,10 @@ void Master::ReceiveAndReassembleFromWorkers(int nodeType, const std::string& pa
 
 void Master::WriteOutputFile()
 {
-    std::ofstream outFile(_baseFileName + ".out");
+    std::ofstream outFile(_outFileName);
 
     if (!outFile) {
-        LOG_FATAL("Couldn't open file: \"{}.out\"", _baseFileName);
+        LOG_FATAL("Couldn't open file: \"{}\"", _outFileName);
     }
 
     for (auto& paragraph : _paragraphsList) {
