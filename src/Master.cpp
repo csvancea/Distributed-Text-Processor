@@ -7,8 +7,14 @@
 
 Master::Master(const std::string& inFile) : _paragraphsListInitialized(false)
 {
+    size_t dotIdx = inFile.find_last_of('.');
+
+    if (dotIdx == std::string::npos) {
+        LOG_FATAL("Input file name has no extension (file: {})", inFile);
+    }
+
     _inFileName = inFile;
-    _outFileName = inFile + ".out";
+    _outFileName = inFile.substr(0, dotIdx) + ".out";
 }
 
 Master::~Master()

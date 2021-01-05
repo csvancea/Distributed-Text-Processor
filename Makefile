@@ -1,5 +1,5 @@
 CXX = mpicxx
-CXXFLAGS = -c -Wall -Wextra -std=c++11 -DFMT_HEADER_ONLY -I./include
+CXXFLAGS = -c -Wall -Wextra -std=c++11 -DFMT_HEADER_ONLY -DOMPI_SKIP_MPICXX=1 -I./include
 CXXFLAGS += -g -DENABLE_LOGGING
 # CXXFLAGS += -O2 -march=native -mtune=native
 LDFLAGS = -pthread
@@ -22,7 +22,7 @@ build: $(OUT_EXE)
 
 .PHONY: run
 run: build
-	mpirun -np $(N_WORKERS) $(OUT_EXE) $(IN_FILE)
+	mpirun --oversubscribe -np $(N_WORKERS) $(OUT_EXE) $(IN_FILE)
 
 .PHONY: clean
 clean:
