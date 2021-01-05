@@ -64,18 +64,18 @@ public:
 	void Log(int rule, const char *format, const Args& ... args) {
 		std::string message = fmt::vformat(format, fmt::make_format_args(args...));
 		std::string final;
-		int threadID;
-
-#ifdef _WIN32
-		threadID = GetCurrentThreadId();
-#else
-		threadID = syscall(SYS_gettid);
-#endif
 		
-		if (rule == RULE_MESSAGE)
+		if (rule == RULE_MESSAGE) {
 			final = fmt::format("{}", message);
-		else
+		}
+		else {
+#ifdef _WIN32
+			auto threadID = GetCurrentThreadId();
+#else
+			auto threadID = syscall(SYS_gettid);
+#endif		
 			final = fmt::format("[{}:{}:{}] {}", GetRulePrefix(rule), _ID, threadID, message);
+		}
 
 		if (_outputToFile && (_outputToFileRules & rule)) {
 			_outputFile << final << std::endl;
