@@ -134,7 +134,7 @@ void Master::ParseAndSendToWorkerNode(int workerNode, const std::string& paragra
 void Master::ReceiveAndReassembleFromWorkerNode(int workerNode, const std::string& paragraphName)
 {
     LOG_DEBUG("Process incoming messages from worker node: {}", paragraphName);
-    (void)paragraphName; // silent unused warning when compiled with LOGGING disabled
+    (void)paragraphName; // silent "unused variable" warning when compiled with LOGGING disabled
 
     MPI_Status status;
     int commandOrParagraphId;

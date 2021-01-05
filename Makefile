@@ -1,7 +1,7 @@
 CXX = mpicxx
 CXXFLAGS = -c -Wall -Wextra -std=c++11 -DFMT_HEADER_ONLY -DOMPI_SKIP_MPICXX=1 -I./include
-CXXFLAGS += -g -DENABLE_LOGGING
-# CXXFLAGS += -O2 -march=native -mtune=native
+# CXXFLAGS += -g -DENABLE_LOGGING
+CXXFLAGS += -O2 -march=native -mtune=native
 LDFLAGS = -pthread
 
 EXE_NAME = main
