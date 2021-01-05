@@ -24,6 +24,12 @@ private:
     void WriteOutputFile();
 
 
+    struct Paragraph
+    {
+        int paragraphType;
+        std::string fullParagraph;
+    };
+
     std::string _inFileName;
     std::string _outFileName;
     std::atomic<bool> _paragraphsListInitialized;

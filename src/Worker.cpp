@@ -5,6 +5,7 @@
 
 #include "Logger.h"
 #include "Worker.h"
+#include "Utils.h"
 
 
 Worker::Worker()
@@ -80,7 +81,8 @@ void Worker::CommSend()
 {
     LOG_DEBUG("Process outgoing messages");
 
-    int lineLength;
+    std::string fullParagraph;
+    int paragraphLength;
 
     for (auto& paragraph : _paragraphsList) {
         LOG_DEBUG("Sending paragraph ID {} to node: master ...", paragraph.globalIdx);
@@ -88,23 +90,21 @@ void Worker::CommSend()
         LOG_DEBUG("Sent paragraph ID {} to node: master", paragraph.globalIdx);
 
         for (auto& line : paragraph.lines) {
-            lineLength = line.length();
-            LOG_DEBUG("Sending line \"{}\" (length: {}) of paragraph ID {} to node: master ...", line, lineLength, paragraph.globalIdx);
-            MPI_Send(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
-            MPI_Send(line.c_str(), lineLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD);
-            LOG_DEBUG("Sent line \"{}\" (length: {}) of paragraph ID {} to node: master", line, lineLength, paragraph.globalIdx);
+            fullParagraph += line + '\n';
         }
 
-        LOG_DEBUG("Sending end of paragraph for paragraph ID {} to node: master ...", paragraph.globalIdx);
-        lineLength = 0;
-        MPI_Send(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+        LOG_DEBUG("Sending paragraph ID content {} to node: master ...", paragraph.globalIdx);
+        paragraphLength = fullParagraph.length();
+        MPI_Send(&paragraphLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+        MPI_Send(fullParagraph.c_str(), paragraphLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD);
+        LOG_DEBUG("Sent paragraph ID content {} to node: master", paragraph.globalIdx);
 
-        LOG_DEBUG("Sent end of paragraph for paragraph ID {} to node: master", paragraph.globalIdx);
+        fullParagraph.clear();
     }
 
     LOG_DEBUG("Sending of transmission to node: master ...");
-    lineLength = -1;
-    MPI_Send(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+    paragraphLength = -1;
+    MPI_Send(&paragraphLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
     LOG_DEBUG("Sent of transmission to node: master");
 }
 
@@ -112,51 +112,39 @@ void Worker::ReceiveParagraph(int globalParagraphIdx)
 {
     MPI_Status status;
     Paragraph paragraph;
-    int lineLength;
+    std::string fullParagraph;
+    int paragraphLength;
 
     paragraph.globalIdx = globalParagraphIdx;
 
-    while (1) {
-        LOG_DEBUG("Receiving current line length for paragraph ID {}", globalParagraphIdx);
-        MPI_Recv(&lineLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
-        LOG_DEBUG("Received current line length for paragraph ID {} -> {}", globalParagraphIdx, lineLength);
-        if (!lineLength) {
-            break;
-        }
+    LOG_DEBUG("Receiving length for paragraph ID {}", globalParagraphIdx);
+    MPI_Recv(&paragraphLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+    LOG_DEBUG("Received length for paragraph ID {} -> {}", globalParagraphIdx, paragraphLength);
 
-        LOG_DEBUG("Receiving current line of length {} for paragraph ID {}", lineLength, globalParagraphIdx);
-        paragraph.lines.emplace_back(lineLength, ' ');
-        MPI_Recv(&paragraph.lines.back()[0], lineLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
-        LOG_DEBUG("Received current line (\"{}\") for paragraph ID {}", paragraph.lines.back(), globalParagraphIdx);
-    }
-    _paragraphsList.push_back(paragraph);
+    LOG_DEBUG("Receiving content of paragraph ID {}", globalParagraphIdx);
+    fullParagraph.resize(paragraphLength);
+    MPI_Recv(&fullParagraph[0], paragraphLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+    LOG_DEBUG("Received paragraph ID {}: \"{}\"", globalParagraphIdx, fullParagraph);
+
+    Utils::Split(fullParagraph, paragraph.lines, '\n');
+    _paragraphsList.push_back(std::move(paragraph));
 }
 
 void Worker::ProcessLastParagraph()
 {
     auto& paragraph = _paragraphsList.back();
-    int numOfLines = paragraph.lines.size();
-    int idx = 0;
-    std::list<std::string>::iterator start_it, end_it, it = paragraph.lines.begin();
+    auto numOfLines = paragraph.lines.size();
 
     LOG_DEBUG("Processing paragraph idx: {}", paragraph.globalIdx);
 
-    while (it != paragraph.lines.end()) {
-        if (idx % LINES_PER_WORKER_THREAD == 0) {
-            start_it = it;
-        }
-        if (idx % LINES_PER_WORKER_THREAD == LINES_PER_WORKER_THREAD - 1 || idx == numOfLines - 1) {
-            end_it = std::next(it);
+    for (size_t start = 0; start < numOfLines; start += LINES_PER_WORKER_THREAD) {
+        size_t end = std::min(start + LINES_PER_WORKER_THREAD, numOfLines);
 
-            _threadPool.AddJob([=]() {
-                for (auto i = start_it; i != end_it; ++i) {
-                    ProcessLine(*i);
-                }
-            });
-        }
-
-        it++;
-        idx++;
+        _threadPool.AddJob([this, start, end, &paragraph]() {
+            for (auto i = start; i != end; ++i) {
+                ProcessLine(paragraph.lines[i]);
+            }
+        });
     }
 }
 
@@ -165,14 +153,9 @@ void WorkerHorror::ProcessLine(std::string& line)
 {
     std::string newLine;
 
-    auto isConsonant = [](char ch) {
-        int lowCh = tolower(ch);
-        return (isalpha(ch) && lowCh != 'a' && lowCh != 'e' && lowCh != 'i' && lowCh != 'o' && lowCh != 'u');
-    };
-
     for (auto ch : line) {
         newLine += ch;
-        if (isConsonant(ch)) {
+        if (Utils::IsConsonant(ch)) {
             newLine += static_cast<char>(tolower(ch));
         }
     }
@@ -227,29 +210,9 @@ void WorkerSF::ProcessLine(std::string& line)
 {
     std::vector<std::string> tokens;
 
-    auto split = [](const std::string& str, std::vector<std::string>& cont, char delim = ' ') {
-        size_t current, previous = 0;
-        current = str.find(delim);
-        while (current != std::string::npos) {
-            cont.push_back(str.substr(previous, current - previous));
-            previous = current + 1;
-            current = str.find(delim, previous);
-        }
-        cont.push_back(str.substr(previous, current - previous));
-    };
-
-    auto reverse = [](std::string& str) {
-        size_t n = str.length();
-    
-        for (size_t i = 0; i < n/2; ++i) {
-            std::swap(str[i], str[n-i-1]);
-        }
-    };
-
-
-    split(line, tokens);
+    Utils::Split(line, tokens);
     for (size_t i = 6; i < tokens.size(); i += 7) {
-        reverse(tokens[i]);
+        Utils::Reverse(tokens[i]);
     }
 
     line.clear();

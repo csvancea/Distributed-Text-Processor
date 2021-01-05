@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <list>
 
 #include "Nodes.h"
@@ -27,6 +28,12 @@ private:
     void ReceiveParagraph(int globalParagraphIdx);
     void ProcessLastParagraph();
 
+
+    struct Paragraph
+    {
+        int globalIdx;
+        std::vector<std::string> lines;
+    };
 
     std::list<Paragraph> _paragraphsList;
     int _availableCores;

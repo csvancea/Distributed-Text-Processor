@@ -67,7 +67,7 @@ void Master::ParseAndSendToWorkers(int nodeType, const std::string& paragraphNam
 
     int state = WAITING_FOR_PARAGRAPH;
     int paragraphIdx = -1;
-    std::string line;
+    std::string line, fullParagraph;
     std::ifstream inFile(_inFileName);
 
     if (!inFile) {
@@ -81,7 +81,7 @@ void Master::ParseAndSendToWorkers(int nodeType, const std::string& paragraphNam
 
             if (line == paragraphName) {
                 state = READING_PARAGRAPH;
-                
+
                 LOG_DEBUG("Sending paragraph ID {} to worker node: \"{}\"", paragraphIdx, paragraphName);
                 MPI_Send(&paragraphIdx, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD);
             } else {
@@ -96,17 +96,22 @@ void Master::ParseAndSendToWorkers(int nodeType, const std::string& paragraphNam
             break;
 
         case READING_PARAGRAPH:
-            int lineLength = line.length();
+            LOG_DEBUG("Read line \"{}\" of paragraph ID {} (\"{}\")", line, paragraphIdx, paragraphName);
 
-            LOG_DEBUG("Sending line \"{}\" of paragraph ID {} to worker node: \"{}\"", line, paragraphIdx, paragraphName);
-            
-            MPI_Send(&lineLength, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD);
-            if (lineLength) {
-                MPI_Send(line.c_str(), lineLength, MPI_CHAR, nodeType, 0, MPI_COMM_WORLD);
-            }
-            else {
+            if (line.empty()) {
                 // entire paragraph read!
                 state = WAITING_FOR_PARAGRAPH;
+
+                LOG_DEBUG("Sending paragraph ID {} to worker node: \"{}\" \"{}\"", paragraphIdx, paragraphName, fullParagraph);
+
+                int paragraphLength = fullParagraph.length();
+                MPI_Send(&paragraphLength, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD);
+                MPI_Send(fullParagraph.c_str(), paragraphLength, MPI_CHAR, nodeType, 0, MPI_COMM_WORLD);
+
+                fullParagraph.clear();
+            }
+            else {
+                fullParagraph += line + '\n';
             }
             break;
         }
@@ -114,10 +119,11 @@ void Master::ParseAndSendToWorkers(int nodeType, const std::string& paragraphNam
 
     if (state == READING_PARAGRAPH) {
         LOG_WARNING("Invalid input file content. Make sure it ends with an empty line. (last state: {}, last line parsed: \"{}\")", state, line);
-        LOG_DEBUG("Sending an empty line to signal end of paragraph ID {} to worker node: \"{}\"", paragraphIdx, paragraphName);
+        LOG_DEBUG("Sending paragraph ID {} to worker node: \"{}\" \"{}\"", paragraphIdx, paragraphName, fullParagraph);
 
-        int lineLength = 0;
-        MPI_Send(&lineLength, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD);
+        int paragraphLength = fullParagraph.length();
+        MPI_Send(&paragraphLength, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD);
+        MPI_Send(fullParagraph.c_str(), paragraphLength, MPI_CHAR, nodeType, 0, MPI_COMM_WORLD);
     }
 
     // this vector stores the content received from the worker nodes (paragraphs, same order as in input file)
@@ -140,7 +146,7 @@ void Master::ReceiveAndReassembleFromWorkers(int nodeType, const std::string& pa
 
     MPI_Status status;
     int commandOrParagraphId;
-    int lineLength;
+    int paragraphLength;
 
     while (1) {
         LOG_DEBUG("Waiting for command or paragraph from node: {} ...", paragraphName);
@@ -156,17 +162,12 @@ void Master::ReceiveAndReassembleFromWorkers(int nodeType, const std::string& pa
         Paragraph& paragraph = _paragraphsList[commandOrParagraphId];
         paragraph.paragraphType = nodeType;
 
-        while (1) {
-            LOG_DEBUG("Waiting for line length of paragraph {} from node: {} ...", commandOrParagraphId, paragraphName);
-            MPI_Recv(&lineLength, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD, &status);
-            LOG_DEBUG("Waiting for line length {} of paragraph {} from node: {} ...", lineLength, commandOrParagraphId, paragraphName);
-            if (lineLength == 0) {
-                break;
-            }
+        LOG_DEBUG("Waiting for paragraph length of paragraph {} from node: {} ...", commandOrParagraphId, paragraphName);
+        MPI_Recv(&paragraphLength, 1, MPI_INT, nodeType, 0, MPI_COMM_WORLD, &status);
+        LOG_DEBUG("Waiting for paragraph {} of length {} from node: {} ...", commandOrParagraphId, paragraphLength, paragraphName);
 
-            paragraph.lines.emplace_back(lineLength, ' ');
-            MPI_Recv(&paragraph.lines.back()[0], lineLength, MPI_CHAR, nodeType, 0, MPI_COMM_WORLD, &status);
-        }
+        paragraph.fullParagraph.resize(paragraphLength);
+        MPI_Recv(&paragraph.fullParagraph[0], paragraphLength, MPI_CHAR, nodeType, 0, MPI_COMM_WORLD, &status);
     }
 }
 
@@ -179,12 +180,7 @@ void Master::WriteOutputFile()
     }
 
     for (auto& paragraph : _paragraphsList) {
-        outFile << GetNodeNameFromNodeType(paragraph.paragraphType) << std::endl;
-
-        for (auto& line : paragraph.lines) {
-            outFile << line << std::endl;
-        }
-
-        outFile << std::endl;
+        outFile << GetNodeNameFromNodeType(paragraph.paragraphType) << '\n';
+        outFile << paragraph.fullParagraph;
     }
 }

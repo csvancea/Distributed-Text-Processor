@@ -1,17 +1,7 @@
 #pragma once
 
-#include <list>
 #include <string>
 
-
-struct Paragraph
-{
-    union {
-        int globalIdx;
-        int paragraphType;
-    };
-    std::list<std::string> lines;
-};
 
 class Node
 {
