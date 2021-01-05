@@ -18,10 +18,12 @@ int main (int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    nodeName = Node::GetNodeNameFromNodeType(rank);
-    logger.SetOutputToFile(true, Logger::RULE_ALL, fmt::format("logs/node_{}.log", nodeName));
-    logger.SetOutputToStdout(true);
+    nodeName = Node::GetNodeNameFromRank(rank);
     logger.SetID(nodeName);
+    logger.SetOutputToStdout(true);
+#ifdef ENABLE_LOGGING
+    logger.SetOutputToFile(true, Logger::RULE_ALL, fmt::format("logs/node_{}.log", nodeName));
+#endif
 
     LOG_DEBUG("Started process ID: {}", getpid());
 
@@ -30,23 +32,23 @@ int main (int argc, char *argv[])
     }
 
     switch (rank) {
-    case Node::TYPE_MASTER:
+    case Node::RANK_MASTER:
         if (argc != 2) {
             LOG_FATAL("Invalid command line arguments specified (argc = {})", argc);
         }
 
         node = new Master(argv[1]);
         break;
-    case Node::TYPE_WORKER_HORROR:
+    case Node::RANK_WORKER_HORROR:
         node = new WorkerHorror();
         break;
-    case Node::TYPE_WORKER_COMEDY:
+    case Node::RANK_WORKER_COMEDY:
         node = new WorkerComedy();
         break;
-    case Node::TYPE_WORKER_FANTASY:
+    case Node::RANK_WORKER_FANTASY:
         node = new WorkerFantasy();
         break;
-    case Node::TYPE_WORKER_SF:
+    case Node::RANK_WORKER_SF:
         node = new WorkerSF();
         break;
     default:

@@ -1,18 +1,18 @@
 #include "Nodes.h"
 
-std::string Node::GetNodeNameFromNodeType(int nodeType)
+std::string Node::GetNodeNameFromRank(int nodeType)
 {
     switch (nodeType)
     {
-        case Node::TYPE_MASTER:
+        case Node::RANK_MASTER:
             return "master";
-        case Node::TYPE_WORKER_HORROR:
+        case Node::RANK_WORKER_HORROR:
             return "horror";
-        case Node::TYPE_WORKER_COMEDY:
+        case Node::RANK_WORKER_COMEDY:
             return "comedy";
-        case Node::TYPE_WORKER_FANTASY:
+        case Node::RANK_WORKER_FANTASY:
             return "fantasy";
-        case Node::TYPE_WORKER_SF:
+        case Node::RANK_WORKER_SF:
             return "science-fiction";
     }
     return "";

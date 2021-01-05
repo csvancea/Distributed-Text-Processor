@@ -50,7 +50,7 @@ void Worker::CommReceive()
     _threadPool.Start(_availableCores - 1);
 
     while (1) {
-        MPI_Recv(&commandOrParagraphId, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(&commandOrParagraphId, 1, MPI_INT, RANK_MASTER, 0, MPI_COMM_WORLD, &status);
         if (commandOrParagraphId < 0) {
             // FINISH command
             break;
@@ -72,36 +72,36 @@ void Worker::CommSend()
     int paragraphLength;
 
     for (auto& paragraph : _paragraphsList) {
-        MPI_Send(&paragraph.globalIdx, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+        MPI_Send(&paragraph.globalIdx, 1, MPI_INT, RANK_MASTER, 0, MPI_COMM_WORLD);
 
         for (auto& line : paragraph.lines) {
             fullParagraph += line + '\n';
         }
 
         paragraphLength = fullParagraph.length();
-        MPI_Send(&paragraphLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
-        MPI_Send(fullParagraph.c_str(), paragraphLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD);
+        MPI_Send(&paragraphLength, 1, MPI_INT, RANK_MASTER, 0, MPI_COMM_WORLD);
+        MPI_Send(fullParagraph.c_str(), paragraphLength, MPI_CHAR, RANK_MASTER, 0, MPI_COMM_WORLD);
 
         fullParagraph.clear();
     }
 
     paragraphLength = -1;
-    MPI_Send(&paragraphLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD);
+    MPI_Send(&paragraphLength, 1, MPI_INT, RANK_MASTER, 0, MPI_COMM_WORLD);
 }
 
 void Worker::ReceiveParagraph(int globalParagraphIdx)
 {
     MPI_Status status;
-    Paragraph paragraph;
+    Worker::Paragraph paragraph;
     std::string fullParagraph;
     int paragraphLength;
 
     paragraph.globalIdx = globalParagraphIdx;
 
-    MPI_Recv(&paragraphLength, 1, MPI_INT, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+    MPI_Recv(&paragraphLength, 1, MPI_INT, RANK_MASTER, 0, MPI_COMM_WORLD, &status);
 
     fullParagraph.resize(paragraphLength);
-    MPI_Recv(&fullParagraph[0], paragraphLength, MPI_CHAR, TYPE_MASTER, 0, MPI_COMM_WORLD, &status);
+    MPI_Recv(&fullParagraph[0], paragraphLength, MPI_CHAR, RANK_MASTER, 0, MPI_COMM_WORLD, &status);
 
     Utils::Split(fullParagraph, paragraph.lines, '\n');
     _paragraphsList.push_back(std::move(paragraph));

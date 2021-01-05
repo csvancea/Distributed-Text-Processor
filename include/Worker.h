@@ -35,7 +35,7 @@ private:
         std::vector<std::string> lines;
     };
 
-    std::list<Paragraph> _paragraphsList;
+    std::list<Worker::Paragraph> _paragraphsList;
     int _availableCores;
     SimpleThreadPool _threadPool;
 };

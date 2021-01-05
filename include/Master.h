@@ -17,9 +17,9 @@ public:
     virtual void Start() override;
 
 private:
-    void WorkerThread(int nodeType);
-    void ParseAndSendToWorkers(int nodeType, const std::string& paragraphName);
-    void ReceiveAndReassembleFromWorkers(int nodeType, const std::string& paragraphName);
+    void WorkerThread(int workerNode);
+    void ParseAndSendToWorkerNode(int workerNode, const std::string& paragraphName);
+    void ReceiveAndReassembleFromWorkerNode(int workerNode, const std::string& paragraphName);
 
     void WriteOutputFile();
 
@@ -33,5 +33,5 @@ private:
     std::string _inFileName;
     std::string _outFileName;
     std::atomic<bool> _paragraphsListInitialized;
-    std::vector<Paragraph> _paragraphsList;
+    std::vector<Master::Paragraph> _paragraphsList;
 };

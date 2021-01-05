@@ -6,13 +6,13 @@
 class Node
 {
 public:
-    enum eNodeType
+    enum eNodeRank
     {
-        TYPE_MASTER,
-        TYPE_WORKER_HORROR,
-        TYPE_WORKER_COMEDY,
-        TYPE_WORKER_FANTASY,
-        TYPE_WORKER_SF,
+        RANK_MASTER,
+        RANK_WORKER_HORROR,
+        RANK_WORKER_COMEDY,
+        RANK_WORKER_FANTASY,
+        RANK_WORKER_SF,
 
         NUM_NODE_TYPES,
     };
@@ -20,7 +20,7 @@ public:
     virtual ~Node() {};
     virtual void Start() = 0;
 
-    static std::string GetNodeNameFromNodeType(int nodeType);
+    static std::string GetNodeNameFromRank(int nodeType);
 };
 
-static_assert (Node::TYPE_MASTER == Node::TYPE_WORKER_HORROR-1, "eNodeType" );
+static_assert (Node::RANK_MASTER == Node::RANK_WORKER_HORROR-1, "eNodeRank" );
