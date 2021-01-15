@@ -1,20 +1,21 @@
-# tema3apd - Cosmin-Razvan VANCEA - 333CA
+# Distributed Text Processor
 
 
 Structura si implementare:
 --------------------------
-* Codul este impartit in 3 parti majore:
+
+- Codul este impartit in 3 parti majore:
   1. Master
   2. Worker
   3. SimpleThreadPool
 
 
-* La pornirea procesului, se interogheaza rank-ul acestuia:
+- La pornirea procesului, se interogheaza rank-ul acestuia:
   - Procesul cu rank 0 devine Master si instantiaza un obiect de tip Master
   - Procesele cu rank 1..4 devin Workeri si fiecare instantiaza un obiect 
   de tip *Worker (aici depinde de tipul de worker)
 
-* Master-ul are urmatoarele roluri:
+- Master-ul are urmatoarele roluri:
   - La instantiere acesta isi creeaza 4 thread-uri, cate unul pentru fiecare
   nod worker.
   - Thread-urile nou create au fiecare acelasi rol:
@@ -26,7 +27,7 @@ Structura si implementare:
   - Dupa ce fiecare thread isi incheie executia, Master-ul genereaza fisierul
   de iesire si isi incheie activitatea
 
-* Worker-ul are urmatoarele roluri:
+- Worker-ul are urmatoarele roluri:
   - La instantiere isi creeaza 1 thread aditional(?) care executa urmatoarele:
     - Instantiaza un SimpleThreadPool cu P-1 thread-uri
     - Asteapta paragrafe de la nodul Master
@@ -38,7 +39,7 @@ Structura si implementare:
     sa isi incheie toate job-urile si ii da ShutDown
     - Se trimit paragrafele procesate inapoi la Master si se inchide procesul.
 
-* SimpleThreadPool este o implementare naiva a unui Thread Pool:
+- SimpleThreadPool este o implementare naiva a unui Thread Pool:
   - Un job este reprezentat de o functie.
   - La Start se spawneaza N thread-uri in pool (N = argument)
   - Exista metoda AddJob care primeste ca parametru o functie care trebuie
@@ -70,25 +71,27 @@ Structura si implementare:
 
 Protocol de comunicatie intre noduri:
 -------------------------------------
-* Nodurile trimit intre ele date astfel:
+
+- Nodurile trimit intre ele date astfel:
   1. ID-ul paragrafului (fiecare paragraf are asociat un ID global
   in functie de pozitia sa in fisierul de intrare; aceste ID-uri
   sunt la fel la nivelul fiecarui worker)
   2. Lungimea intregului paragraf
   3. Paragraful efectiv.
-  * Cand nu mai exista paragrafe, se semnaleaza trimitandu-se un paragraf
+  - Cand nu mai exista paragrafe, se semnaleaza trimitandu-se un paragraf
   cu ID-ul negativ (invalid)
 
-* Nodul Master isi incepe executia ca Sender, iar workerii ca Receivers.
-* Dupa ce Master termina toate paragrafele de trimis, se inverseaza rolurile.
+- Nodul Master isi incepe executia ca Sender, iar workerii ca Receivers.
+- Dupa ce Master termina toate paragrafele de trimis, se inverseaza rolurile.
 
 
 Mecanisme de sincronizare intre thread-uri:
 -------------------------------------------
-* Aplicatia a fost dezvoltata astfel incat sa nu necesite (prea multa) sincronizare
+
+- Aplicatia a fost dezvoltata astfel incat sa nu necesite (prea multa) sincronizare
 intre thread-uri.
 
-* Thread-urile nodului Master:
+- Thread-urile nodului Master:
   - La citirea si trimiterea datelor nu este nevoie de sincronizare
   - La finalul parsarii fisierului de intrare, trebuie alocat un buffer in care
   se vor receptiona toate paragrafele.
@@ -100,8 +103,20 @@ intre thread-uri.
   fiecare thread receptioneaza paragrafe cu ID-uri diferite si vor fi scrise
   in buffer la locatii diferite intre ele.
 
-* Thread-urile nodului Worker:
+- Thread-urile nodului Worker:
   - Sincronizarea se face aici doar intre thread-ul de Receive/Send si
   thread-urile din job pool.
   - Mecanismele folosite pentru sincronizare au fost explicate anterior la
   detalierea thread pool-ului.
+
+
+Scalabilitate:
+--------------
+
+- Aplicatia a fost conceputa sa scaleze pe sisteme cu mai multe core-uri.
+- Cu cat sunt mai multe core-uri, cu atat workerii pot procesa in paralel
+mai multe linii sau chiar paragrafe (implementarea folosind un thread pool
+imi permite sa procesez in paralel linii din paragrafe diferite).
+- Cum am precizat mai sus, existenta a putine puncte de sincronizare in
+program creste eficacitatea intrucat exista foarte putini timpi "liberi"
+in care un thread trebuie sa astepte alt thread.
